@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  chat-server:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      - ./chat-states.json:/app/chat-states.json
+    restart: unless-stopped
