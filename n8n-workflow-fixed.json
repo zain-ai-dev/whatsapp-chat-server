@@ -1,0 +1,506 @@
+{
+  "name": "WhatsApp Chatbot - AI Delay with Client Takeover (FIXED)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-2464, 1200],
+      "id": "a5080dab-3d6b-44c7-a036-3f4a5ca88c8c",
+      "name": "Webhook - Messages",
+      "webhookId": "4bef86b0-2efc-4fd4-8ba0-e611b074e301"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract message data\nconst body = $json.body;\nconst data = body.data;\nconst key = data.key;\n\nconst remoteJid = key.remoteJid;\nconst fromMe = key.fromMe;\nconst source = data.source;\nconst timestamp = data.messageTimestamp;\nconst messageText = data.message.conversation || '';\nconst pushName = data.pushName || 'Unknown';\n\n// Classify message type\nlet messageType = 'UNKNOWN';\nif (fromMe === false) {\n  messageType = 'CUSTOMER';\n} else if (fromMe === true && source === 'web') {\n  messageType = 'AI';\n} else if (fromMe === true && (source === 'android' || source === 'iphone' || source !== 'web')) {\n  messageType = 'CLIENT';\n}\n\nreturn {\n  remoteJid: remoteJid,\n  fromMe: fromMe,\n  source: source,\n  timestamp: timestamp,\n  messageText: messageText,\n  pushName: pushName,\n  messageType: messageType,\n  isCustomer: messageType === 'CUSTOMER',\n  isAI: messageType === 'AI',\n  isClient: messageType === 'CLIENT'\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2208, 1200],
+      "id": "8fc3e573-f914-4969-a521-08091e306296",
+      "name": "Function - Extract Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "condition-message-type",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "CUSTOMER",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-1968, 1200],
+      "id": "0245d1d6-b530-41a9-918e-5c9b7ae848a4",
+      "name": "If - Message Type"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "condition-ai-vs-client",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "AI",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-1968, 1552],
+      "id": "2be807a7-7d99-4a5b-944e-7712e6bb9e0a",
+      "name": "If - AI or Client"
+    },
+    {
+      "parameters": {
+        "url": "=http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/status?remoteJid={{ $json.remoteJid }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1760, 1104],
+      "id": "a7333849-b790-4402-89e3-6935daf5be7f",
+      "name": "HTTP - Get Chat Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "condition-client-active",
+              "leftValue": "={{ $json.clientActive }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-1568, 1104],
+      "id": "26df30b0-185e-4756-a043-a230005a71ca",
+      "name": "If - Client Active"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-1360, 992],
+      "id": "18a83347-85bd-4dab-bc3e-64934b85c9f3",
+      "name": "SKIP - Client Handling Chat"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "lastCustomerTime",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp * 1000 }}"
+            },
+            {
+              "name": "lastResponder",
+              "value": "ai"
+            },
+            {
+              "name": "aiPending",
+              "value": "true"
+            },
+            {
+              "name": "clientActive",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1520, 1248],
+      "id": "b1111111-aaaa-4aaa-8aaa-000000000001",
+      "name": "HTTP - Set AI Pending"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the user message: {{ $('Webhook - Messages').item.json.body.data.message.conversation }}",
+        "options": {
+          "systemMessage": "You are a helpful assistant. Reply to the user query in the smartest possible way but keep it to one sentence. Don't extend the response."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-1344, 1200],
+      "id": "9b94aed9-37fb-4e6b-8773-280cd95a5ba8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-1264, 1392],
+      "id": "69e22ff0-912e-4038-ad7e-07f710c111fa",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-1440, 1376],
+      "id": "5ad37f92-a953-4e9e-b235-13193ef53bce",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rv8Gx2C0yKGwzKZT",
+          "name": "Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-1008, 1248],
+      "id": "d718f146-14ea-4eb9-8fdc-ab677775c25d",
+      "name": "Wait - 60 Seconds",
+      "webhookId": "wait-60-sec-webhook"
+    },
+    {
+      "parameters": {
+        "url": "=http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/status?remoteJid={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-832, 1248],
+      "id": "f512b06c-2f69-4ef9-b0bc-4b2052ccfe0a",
+      "name": "HTTP - Recheck Client Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "condition-ai-still-pending",
+              "leftValue": "={{ $json.aiPending }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-624, 1248],
+      "id": "a68bd06f-ac82-4ed9-a1c8-0c7487f85ccf",
+      "name": "If - AI Still Pending"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-432, 1152],
+      "id": "5732e3fc-94a1-4168-96ee-931fe86ea9fe",
+      "name": "CANCEL - AI Response (Client Took Over)"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Webhook - Messages').item.json.body.instance }}",
+        "remoteJid": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
+        "messageText": "={{ $('AI Agent').item.json.output }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [-432, 1344],
+      "id": "25097465-d90b-40d7-9ee0-9a62e6a3475f",
+      "name": "Send - AI Message",
+      "credentials": {
+        "evolutionApi": {
+          "id": "nUouiKyAGid2oMmY",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "lastAITime",
+              "value": "={{ Date.now() }}"
+            },
+            {
+              "name": "lastResponder",
+              "value": "ai"
+            },
+            {
+              "name": "aiPending",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-224, 1344],
+      "id": "f2694159-ec48-45fb-9745-5fd7fd83593f",
+      "name": "HTTP - Update AI Response Time"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "lastAITime",
+              "value": "={{ $json.timestamp * 1000 }}"
+            },
+            {
+              "name": "lastResponder",
+              "value": "ai"
+            },
+            {
+              "name": "aiPending",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1728, 1536],
+      "id": "da4d19d3-b6e5-4688-9f10-3389cdb84092",
+      "name": "HTTP - Log AI Response"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Webhook - Messages').item.json.body.instance }}",
+        "remoteJid": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
+        "messageText": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [-1760, 1696],
+      "id": "a3d8918c-4ace-4368-99ef-61ac9fd37bf2",
+      "name": "Send - Client Message (Immediate)",
+      "credentials": {
+        "evolutionApi": {
+          "id": "nUouiKyAGid2oMmY",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "lastClientTime",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp * 1000 }}"
+            },
+            {
+              "name": "lastResponder",
+              "value": "client"
+            },
+            {
+              "name": "clientActive",
+              "value": "true"
+            },
+            {
+              "name": "aiPending",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1568, 1696],
+      "id": "5fb7ec9e-49dd-4c4f-8342-4208aa64af3d",
+      "name": "HTTP - Update Client Takeover"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/workflow/cancel-ai",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1360, 1696],
+      "id": "58508627-2450-4b6e-add3-2e86859ff396",
+      "name": "HTTP - Cancel Pending AI"
+    }
+  ],
+  "connections": {
+    "Webhook - Messages": {
+      "main": [[{ "node": "Function - Extract Data", "type": "main", "index": 0 }]]
+    },
+    "Function - Extract Data": {
+      "main": [[{ "node": "If - Message Type", "type": "main", "index": 0 }]]
+    },
+    "If - Message Type": {
+      "main": [
+        [{ "node": "HTTP - Get Chat Status", "type": "main", "index": 0 }],
+        [{ "node": "If - AI or Client", "type": "main", "index": 0 }]
+      ]
+    },
+    "If - AI or Client": {
+      "main": [
+        [{ "node": "HTTP - Log AI Response", "type": "main", "index": 0 }],
+        [{ "node": "Send - Client Message (Immediate)", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP - Get Chat Status": {
+      "main": [[{ "node": "If - Client Active", "type": "main", "index": 0 }]]
+    },
+    "If - Client Active": {
+      "main": [
+        [{ "node": "SKIP - Client Handling Chat", "type": "main", "index": 0 }],
+        [{ "node": "HTTP - Set AI Pending", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP - Set AI Pending": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "Wait - 60 Seconds", "type": "main", "index": 0 }]]
+    },
+    "Simple Memory": {
+      "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Wait - 60 Seconds": {
+      "main": [[{ "node": "HTTP - Recheck Client Status", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Recheck Client Status": {
+      "main": [[{ "node": "If - AI Still Pending", "type": "main", "index": 0 }]]
+    },
+    "If - AI Still Pending": {
+      "main": [
+        [{ "node": "Send - AI Message", "type": "main", "index": 0 }],
+        [{ "node": "CANCEL - AI Response (Client Took Over)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send - AI Message": {
+      "main": [[{ "node": "HTTP - Update AI Response Time", "type": "main", "index": 0 }]]
+    },
+    "Send - Client Message (Immediate)": {
+      "main": [[{ "node": "HTTP - Update Client Takeover", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Update Client Takeover": {
+      "main": [[{ "node": "HTTP - Cancel Pending AI", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3a016f810ed20da1467bec3322ab9c93a3524649415762e8096eebd77770a497"
+  }
+}
