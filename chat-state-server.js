@@ -65,24 +65,30 @@ app.get('/api/chat/status', (req, res) => {
   res.json({
     remoteJid: remoteJid,
     lastClientTime: chatState.lastClientTime,
+    lastCustomerTime: chatState.lastCustomerTime,
+    lastAITime: chatState.lastAITime,
     secondsSinceClient: secondsSinceClient,
     clientActive: clientActive,
+    aiPending: chatState.aiPending === true,
     lastResponder: chatState.lastResponder
   });
 });
 
 app.post('/api/chat/update', (req, res) => {
-  const { remoteJid, lastClientTime, lastAITime, lastResponder, clientActive, aiPending } = req.body;
+  const { remoteJid, lastClientTime, lastCustomerTime, lastAITime, lastResponder, clientActive, aiPending } = req.body;
   if (!remoteJid) {
     return res.status(400).json({ error: 'remoteJid required' });
   }
+  // Coerce values: n8n sends booleans/numbers as strings ("true"/"false"/"123")
+  const toBool = (v) => v === true || v === 'true';
   const states = loadChatStates();
   const chatState = getChatState(remoteJid);
-  if (lastClientTime !== undefined) chatState.lastClientTime = lastClientTime;
-  if (lastAITime !== undefined) chatState.lastAITime = lastAITime;
+  if (lastClientTime !== undefined) chatState.lastClientTime = Number(lastClientTime) || 0;
+  if (lastCustomerTime !== undefined) chatState.lastCustomerTime = Number(lastCustomerTime) || 0;
+  if (lastAITime !== undefined) chatState.lastAITime = Number(lastAITime) || 0;
   if (lastResponder !== undefined) chatState.lastResponder = lastResponder;
-  if (clientActive !== undefined) chatState.clientActive = clientActive;
-  if (aiPending !== undefined) chatState.aiPending = aiPending;
+  if (clientActive !== undefined) chatState.clientActive = toBool(clientActive);
+  if (aiPending !== undefined) chatState.aiPending = toBool(aiPending);
   states[remoteJid] = chatState;
   saveChatStates(states);
   res.json({ success: true, updated: chatState });
