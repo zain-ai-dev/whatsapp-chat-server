@@ -67,6 +67,7 @@ function defaultState(key) {
     greetingSent: false,
     greetingText: null,
     customerName: null,
+    lastCustomerMsgId: null,
     buffer: []
   };
 }
@@ -108,6 +109,7 @@ app.get('/api/chat/status', (req, res) => {
   const now = Date.now();
   const secondsSinceClient = Math.floor((now - chatState.lastClientTime) / 1000);
   const clientActive = secondsSinceClient < 60 && chatState.lastClientTime > 0;
+  const buffer = chatState.buffer || [];
   res.json({
     remoteJid: key,
     lastClientTime: chatState.lastClientTime,
@@ -119,7 +121,13 @@ app.get('/api/chat/status', (req, res) => {
     greetingSent: chatState.greetingSent === true,
     greetingText: chatState.greetingText,
     customerName: chatState.customerName,
-    lastResponder: chatState.lastResponder
+    lastResponder: chatState.lastResponder,
+    // Persistent id of the most recent customer message (NOT cleared with the
+    // buffer). The conversation workflow uses this to let only the latest run
+    // proceed after the debounce — prevents duplicate / cancelled AI replies.
+    lastCustomerMsgId: chatState.lastCustomerMsgId,
+    bufferCount: buffer.length,
+    combinedText: buffer.map((m) => m.messageText).filter(Boolean).join('\n')
   });
 });
 
@@ -185,6 +193,9 @@ app.post('/api/chat/buffer', (req, res) => {
     timestamp: Number(timestamp) || Date.now()
   };
   chatState.buffer.push(entry);
+  // Persistent marker of the latest customer message — survives buffer clears.
+  chatState.lastCustomerMsgId = entry.id;
+  chatState.lastCustomerTime = entry.timestamp;
   // Keep only the most recent BUFFER_MAX messages so the file stays small.
   if (chatState.buffer.length > BUFFER_MAX) {
     chatState.buffer = chatState.buffer.slice(-BUFFER_MAX);
