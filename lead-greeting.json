@@ -1,0 +1,172 @@
+{
+  "name": "TimeZone Dubai - Lead Greeting",
+  "nodes": [
+    {
+      "parameters": {
+        "page": {
+          "__rl": true,
+          "value": "756893840835673",
+          "mode": "list",
+          "cachedResultName": "Timezone Dubai",
+          "cachedResultUrl": "https://facebook.com/756893840835673"
+        },
+        "form": {
+          "__rl": true,
+          "value": "1794937388136326",
+          "mode": "list",
+          "cachedResultName": "BOS Salman Vol I"
+        },
+        "options": {}
+      },
+      "name": "Facebook Lead Ads Trigger",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [-400, 160],
+      "id": "8c099232-90ef-4216-ae6b-0dee06f343e9",
+      "webhookId": "bcd0691a-19f7-478e-9577-fe888520bd39",
+      "credentials": {
+        "facebookLeadAdsOAuth2Api": {
+          "id": "Nh0xA4yKkOaHOJ3c",
+          "name": "Timezone Dubai Facebook Lead Ads account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "customer_name",
+              "value": "={{ $json.data.full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "whatsapp_number",
+              "value": "={{ $json.data.phone_number.replace(/[^0-9]/g, '').replace(/^00/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "email",
+              "value": "={{ $json.data.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "watch_interest",
+              "value": "={{ $json.data['which_watch_brand_are_you_interested_in?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "budget",
+              "value": "={{ $json.data['what_is_your_estimated_budget?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "ready_to_visit",
+              "value": "={{ $json.data['are_you_ready_to_visit_our_dubai_store?'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Format Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-180, 160],
+      "id": "dbe45be9-0bc4-45e6-ac60-efc89e06e35b"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "my-whatsapp",
+        "remoteJid": "={{ $json.whatsapp_number }}",
+        "messageText": "=Hello {{ $json.customer_name }}! 👋\n\nThank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC.\n\nWe'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for? 🕰️",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [40, 160],
+      "id": "b6003069-69bf-4129-b487-82014c6d70c5",
+      "name": "Send Greeting",
+      "credentials": {
+        "evolutionApi": {
+          "id": "nUouiKyAGid2oMmY",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/seed-greeting",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Format Lead').item.json.whatsapp_number }}"
+            },
+            {
+              "name": "customerName",
+              "value": "={{ $('Format Lead').item.json.customer_name }}"
+            },
+            {
+              "name": "greetingText",
+              "value": "=Hello {{ $('Format Lead').item.json.customer_name }}! Thank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC. We'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 160],
+      "id": "c1111111-aaaa-4aaa-8aaa-000000000010",
+      "name": "HTTP - Seed Greeting State"
+    }
+  ],
+  "connections": {
+    "Facebook Lead Ads Trigger": {
+      "main": [[{ "node": "Format Lead", "type": "main", "index": 0 }]]
+    },
+    "Format Lead": {
+      "main": [[{ "node": "Send Greeting", "type": "main", "index": 0 }]]
+    },
+    "Send Greeting": {
+      "main": [[{ "node": "HTTP - Seed Greeting State", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {
+    "Facebook Lead Ads Trigger": [
+      {
+        "id": "2132421094154584",
+        "data": {
+          "which_watch_brand_are_you_interested_in?": "Rolex",
+          "what_is_your_estimated_budget?": "50k to 100k AED",
+          "are_you_ready_to_visit_our_dubai_store?": "just browsing",
+          "email": "zainakram4601@gmail.com",
+          "full_name": "Zain",
+          "phone_number": "+923014601801"
+        },
+        "form": {
+          "id": "1794937388136326",
+          "name": "BOS Salman Vol I",
+          "locale": "en_US",
+          "status": "ACTIVE"
+        },
+        "page": { "name": "Timezone", "id": "756893840835673" },
+        "created_time": "2026-06-26T06:22:28+0000"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3a016f810ed20da1467bec3322ab9c93a3524649415762e8096eebd77770a497"
+  }
+}
