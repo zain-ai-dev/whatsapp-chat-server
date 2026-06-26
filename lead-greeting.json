@@ -86,7 +86,7 @@
         "resource": "messages-api",
         "instanceName": "my-whatsapp",
         "remoteJid": "={{ $json.whatsapp_number }}",
-        "messageText": "=Hello {{ $json.customer_name }}!\n\nThank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC.\n\nWe'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for?",
+        "messageText": "=Hello {{ $json.customer_name }}! Thanks for reaching out to TimeZone Dubai, luxury pre-owned watches in Gate Avenue, DIFC. How can we help you today?",
         "options_message": {}
       },
       "type": "n8n-nodes-evolution-api-en.evolutionApi",
@@ -118,7 +118,7 @@
             },
             {
               "name": "greetingText",
-              "value": "=Hello {{ $('Format Lead').item.json.customer_name }}! Thank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC. We'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for?"
+              "value": "=Hello {{ $('Format Lead').item.json.customer_name }}! Thanks for reaching out to TimeZone Dubai, luxury pre-owned watches in Gate Avenue, DIFC. How can we help you today?"
             }
           ]
         },
