@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract message data\nconst body = $json.body;\nconst data = body.data;\nconst key = data.key;\n\nconst remoteJid = key.remoteJid;\nconst messageId = key.id;\nconst fromMe = key.fromMe;\nconst source = data.source;\nconst timestamp = data.messageTimestamp;\nconst messageText = data.message.conversation || '';\nconst pushName = data.pushName || 'Unknown';\n\n// Classify message type\nlet messageType = 'UNKNOWN';\nif (fromMe === false) {\n  messageType = 'CUSTOMER';\n} else if (fromMe === true && source === 'web') {\n  messageType = 'AI';\n} else if (fromMe === true && (source === 'android' || source === 'iphone' || source !== 'web')) {\n  messageType = 'CLIENT';\n}\n\nreturn {\n  remoteJid: remoteJid,\n  messageId: messageId,\n  fromMe: fromMe,\n  source: source,\n  timestamp: timestamp,\n  messageText: messageText,\n  pushName: pushName,\n  messageType: messageType,\n  isCustomer: messageType === 'CUSTOMER',\n  isAI: messageType === 'AI',\n  isClient: messageType === 'CLIENT'\n};"
+        "jsCode": "// Extract message data\nconst body = $json.body;\nconst data = body.data;\nconst key = data.key;\n\nconst remoteJid = key.remoteJid;\nconst messageId = key.id;\nconst fromMe = key.fromMe;\nconst source = data.source;\nconst timestamp = data.messageTimestamp;\nconst messageText = data.message.conversation || '';\nconst pushName = data.pushName || 'Unknown';\n\n// CUSTOMER = inbound (fromMe false). Everything we/Shaheer send is fromMe true\n// and goes to the OUTBOUND path, where the server tells us (by matching the\n// text we sent) whether it is our own echo or a real human message.\nlet messageType = 'OUTBOUND';\nif (fromMe === false) {\n  messageType = 'CUSTOMER';\n}\n\nreturn {\n  remoteJid: remoteJid,\n  messageId: messageId,\n  fromMe: fromMe,\n  source: source,\n  timestamp: timestamp,\n  messageText: messageText,\n  pushName: pushName,\n  messageType: messageType,\n  isCustomer: messageType === 'CUSTOMER'\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -43,23 +43,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
-          "conditions": [
-            { "id": "condition-ai-vs-client", "leftValue": "={{ $json.messageType }}", "rightValue": "AI", "operator": { "type": "string", "operation": "equals" } }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [-3712, 4592],
-      "id": "8f3b549a-ce58-4763-8fe3-ec7b09f46038",
-      "name": "If - AI or Client"
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/buffer",
         "sendBody": true,
@@ -75,18 +58,18 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3808, 4352],
+      "position": [-3808, 4256],
       "id": "d2222222-aaaa-4aaa-8aaa-000000000020",
       "name": "HTTP - Buffer Append"
     },
     {
-      "parameters": { "amount": 30 },
+      "parameters": { "amount": 15 },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-3584, 4352],
+      "position": [-3584, 4256],
       "id": "079a582a-1e7a-4d56-99f7-96aaa2bc1159",
-      "name": "Wait - 30s (Batch + Takeover)",
-      "webhookId": "wait-30s-batch"
+      "name": "Wait - 15s (Batch + Takeover)",
+      "webhookId": "wait-15s-batch"
     },
     {
       "parameters": {
@@ -95,7 +78,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3360, 4352],
+      "position": [-3360, 4256],
       "id": "6faa2e2a-ad14-4a2f-8299-f153b4e96139",
       "name": "HTTP - Get Status (After Wait)"
     },
@@ -105,7 +88,7 @@
           "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
           "conditions": [
             { "id": "cond-latest", "leftValue": "={{ $json.lastCustomerMsgId }}", "rightValue": "={{ $('Webhook - Messages').item.json.body.data.key.id }}", "operator": { "type": "string", "operation": "equals" } },
-            { "id": "cond-not-client", "leftValue": "={{ $json.clientActive }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
+            { "id": "cond-ai-enabled", "leftValue": "={{ $json.aiDisabled }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
           ],
           "combinator": "and"
         },
@@ -113,29 +96,29 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-3136, 4352],
+      "position": [-3136, 4256],
       "id": "a5555555-aaaa-4aaa-8aaa-000000000050",
-      "name": "If - Latest & Client Free"
+      "name": "If - Latest & AI Enabled"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-2912, 4192],
+      "position": [-2912, 4112],
       "id": "b6666666-aaaa-4aaa-8aaa-000000000060",
-      "name": "STOP - Superseded or Client Took Over"
+      "name": "STOP - Superseded / Handed Off"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Customer's message(s) to answer (treat all lines as one turn):\n{{ $('HTTP - Get Status (After Wait)').item.json.combinedText }}\n{{ $('HTTP - Get Status (After Wait)').item.json.greetingSent ? '[Internal note: This customer already received our welcome greeting earlier. Do NOT greet again, do NOT say \"Welcome\", and do NOT re-introduce the boutique. Just answer their actual question directly.]' : '' }}",
+        "text": "=Customer's message(s) to answer (treat all lines as one single turn):\n{{ $('HTTP - Get Status (After Wait)').item.json.combinedText }}\n{{ $('HTTP - Get Status (After Wait)').item.json.greetingSent ? '[Internal note: This customer already received our welcome greeting earlier. Do NOT greet again, do NOT say Welcome, do NOT re-introduce the boutique. Just answer directly.]' : '' }}",
         "options": {
-          "systemMessage": "You are the WhatsApp assistant for TimeZone Dubai (The Timezone Watches Ltd), Dubai's leading destination for luxury timepieces, based at Gate Avenue, DIFC. We specialize in exceptional PRE-OWNED and RARE GENUINE watches from the world's most prestigious brands, backed by over a century of Swiss watchmaking craftsmanship and heritage. Our in-store collection includes Rolex, Patek Philippe, Audemars Piguet, Richard Mille, Cartier, Bvlgari, A. Lange & Söhne, and Arnold & Son. We also offer sourcing services for exclusive brands including Audemars Piguet, Hublot, Patek Philippe, Richard Mille, Jaeger-LeCoultre, Panerai, Breguet, Breitling, Franck Muller, and IWC, among others. Every watch is 100% authentic, inspected multi-point by our in-house experts — we never sell replicas or first-copies. Our four core values are Service, Knowledge, Independence, and Trust.\n\nGreet every customer warmly and naturally, and find out what they are looking for. Never mention Facebook, ads, leads, or how they reached us — just have a friendly, general conversation. Your goals, in order: (1) understand which watch / brand / style they want and whether they are a serious buyer, (2) build interest using your brand knowledge, (3) route them appropriately.\n\nHow to route (decide based on the customer's message):\n- If they want to see, try on, buy, or browse a watch, or are clearly a serious buyer → invite them to VISIT OUR SHOWROOM for a private viewing by appointment, and ALWAYS include the showroom address together with the Google Maps link below.\n- If they want pricing, a trade-in/sell valuation, negotiation, a specific model/availability check, or ask anything you cannot answer from the info above → tell them our team will assist them, and connect them (a specialist will take over the chat).\n- If it is a simple general question you can answer from the info above → answer it briefly, then point them to a showroom visit or our team.\n\nWhat you know (use when relevant):\n- Condition: mint and near-mint; any minor wear is documented with photos.\n- Warranty: most watches carry the remainder of the manufacturer warranty; otherwise our own 12-month mechanical warranty.\n- Trade-in: yes, competitive valuations — our team can give a preliminary valuation.\n- Boxes & papers: we prioritize full sets; details are confirmed per watch.\n- Services: buy, sell, and trade pre-owned luxury watches, plus professional evaluation, customization, and watchmaking/servicing.\n- We serve clients across the UAE: Dubai, Abu Dhabi, Sharjah, Ajman, Ras al-Khaimah, Fujairah, Umm al Quwain, and Palm Jumeirah.\n- Showroom: North Zone, Gate Avenue, Unit GA-00-NZ-G0-RT-49, Level GF, DIFC, Dubai, UAE. Google Maps: https://maps.app.goo.gl/yYsfxWDLoRYSx1XP7 . Hours: Mon–Sat 10:00–22:00, Sun 12:00–20:00. Contact: +971 58 905 1405, info@timezonedubai.com.\n- Website: https://timezonedubai.com — share only when the customer actually needs it (e.g. to browse the collection), never by default.\n\nRules:\n- NEVER quote, estimate, or discuss prices. If asked about price, let them know our team shares details during a private viewing or call, and offer a showroom visit.\n- NEVER confirm orders or take payment.\n- NEVER guess or improvise. If you do not know something (a specific model, availability, a detail, or anything outside the info above), do not make it up — reply with a short, helpful line such as: \"Let me have our team get in touch with you on this.\" and offer a showroom visit or specialist call.\n- Sound like a real person from the boutique texting on WhatsApp — natural and warm. NEVER reveal or imply you are an AI, bot, or assistant.\n- Use appreciation or filler words (\"Great\", \"Perfect\", \"Thank you\", etc.) only when the moment genuinely calls for it — not at the start of every message.\n- When you mention or invite them to the showroom, you MUST include the location (address + Google Maps link). Never mention the showroom without the location.\n- Never use internal terms like \"Client Advisor\" or \"specialist\" to the customer — just say \"our team\". Do NOT repeat \"our team\" in every message; only mention a handoff when genuinely needed, and vary your wording.\n- English only. CRITICAL: keep EVERY reply to 1–2 short lines maximum (one or two short sentences) — like a quick WhatsApp text, never a paragraph. Ask only one question at a time.\n- When the customer is ready, let them know our team will follow up and/or invite them to book a showroom visit — in one short line.\n\nCONVERSATION CONTINUITY: If the user message contains an internal note saying the customer was already greeted, do NOT greet again, do NOT say \"Welcome\", and do NOT re-introduce the boutique — simply continue and answer what they asked. The customer may send several messages at once; treat them as a single turn and answer them together in one short reply. Use the conversation memory so you never repeat yourself or lose context."
+          "systemMessage": "You are the first responder on Timezone Watches' WhatsApp. Timezone is a luxury pre-owned watch boutique in Gate Avenue, DIFC, Dubai.\n\nA human sales agent named Shaheer is watching this conversation in real time. The moment he sends a message manually, you stop responding completely. Do not announce this. Do not say you are passing them to Shaheer. Just stop. The conversation continues naturally with him.\n\nUntil Shaheer intervenes, your job is to greet the lead warmly, find out what they need, and gather key information, one question at a time, naturally, in short messages.\n\nYOUR PERSONALITY\nWarm, concise, and confident. You sound like a knowledgeable person who works in a high-end boutique. Not a chatbot, not a call centre. Every message must be under 35 words. No bullet points. No lists. No em dashes or en dashes. One idea per message. One question per message. Never open with Great or Awesome or Absolutely.\n\nFIGURE OUT IF THEY ARE BUYING OR SELLING\nTwo types of people contact Timezone. Buyers who want to purchase a watch. Sellers who want to sell or trade one they already own. Do not bluntly ask are you buying or selling. Read their opening message first. If it is obvious, proceed. If it is not clear, ask one open question to find out.\n\nIF THEY WANT TO BUY\nGather these four things in order, one at a time:\nOne, what watch they are looking for (brand, model, reference if they know it).\nTwo, their approximate budget in AED.\nThree, whether they are based in the UAE.\nFour, whether they are ready to buy soon or still exploring.\nOnce you have all four, stop asking questions. Keep the conversation open and warm. Do not promise that Shaheer will follow up. He is already here.\n\nIF THEY WANT TO SELL OR TRADE\nGather these four things in order, one at a time:\nOne, what watch they want to sell or trade (brand, model, reference if they know it).\nTwo, whether they have the original box and papers.\nThree, whether they are based in the UAE.\nFour, whether they want a straight sale or are open to trading toward another piece.\nOnce you have all four, stop asking questions. Keep the conversation warm and open.\n\nHANDLING COMMON SITUATIONS\nIf the opening message already answers one or more of your questions, skip those and move to the next unanswered one.\nIf they ask for a price, give the listed price only if you genuinely know it. Never invent or estimate a number. Then continue with your next qualifying question.\nIf they ask something you cannot answer, say you will have the details checked and keep the conversation moving. Do not guess or invent information.\nIf they are impatient or pushy, stay calm and keep your replies short. Do not escalate.\nIf they ask whether they are speaking to a human or a bot, be honest. Tell them you are Timezone's automated assistant and that someone from the team is available shortly.\nIf their budget is clearly out of range, under AED 30,000, or they say they want something cheap, be polite. Let them know the collection starts from AED 45,000 and all pieces are at the DIFC boutique. Keep it warm and end naturally.\n\nLANGUAGE\nAlways respond in English only, regardless of the language the lead uses. Never reply in any other language.\n\nPRICING\nYou do not have a live catalogue. The only price you may state is that the collection starts from AED 45,000. For any specific model price or availability, say you will have the details checked. Never invent specific numbers and never confirm a specific piece is in stock.\n\nWHAT YOU NEVER DO\nNever send more than one question per message. Never send a message longer than 35 words. Never use em dashes or en dashes. Never announce that Shaheer is taking over or that you are stopping. Never negotiate price. Never confirm availability of a specific piece. Never send photos. Never follow up if the lead goes quiet.\n\nCONTINUITY\nIf the user message contains an internal note saying the customer was already greeted, do not greet again, do not say Welcome, and do not re-introduce the boutique. Just continue. The customer may send several messages at once. Treat them as a single turn and answer them together in one short reply. Use the conversation memory so you never repeat yourself or lose context.\n\nWHEN YOU ARE DONE\nOnce you have gathered all four qualifying answers for a buyer or a seller and have written your final warm closing line, finish that line and then, on a new final line, output the exact token <<QUALIFIED>>. This token is stripped before sending and is never visible to the customer. Do not output the token until you genuinely have all four answers."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [-2912, 4400],
+      "position": [-2912, 4304],
       "id": "68100454-bc41-4a7e-8fff-850168f427da",
       "name": "AI Agent"
     },
@@ -146,7 +129,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
-      "position": [-2832, 4624],
+      "position": [-2832, 4528],
       "id": "84d059d7-e4d8-48ad-9431-836f84e77f40",
       "name": "Simple Memory"
     },
@@ -154,7 +137,7 @@
       "parameters": { "options": {} },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
-      "position": [-2976, 4608],
+      "position": [-2976, 4512],
       "id": "745b4a94-d39d-4590-a3ef-7d196b0de01f",
       "name": "Google Gemini Chat Model",
       "credentials": {
@@ -163,15 +146,25 @@
     },
     {
       "parameters": {
+        "jsCode": "// Strip the hidden completion token before sending, and report whether the\n// AI signalled that it has finished qualifying this lead.\nconst out = ($('AI Agent').item.json.output || '').toString();\nconst qualified = /<<\\s*QUALIFIED\\s*>>/i.test(out);\nconst cleanText = out.replace(/<<\\s*QUALIFIED\\s*>>/ig, '').trim();\nreturn { cleanText: cleanText, qualified: qualified };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2688, 4304],
+      "id": "e8888888-aaaa-4aaa-8aaa-000000000080",
+      "name": "Code - Parse Completion"
+    },
+    {
+      "parameters": {
         "resource": "messages-api",
         "instanceName": "={{ $('Webhook - Messages').item.json.body.instance }}",
         "remoteJid": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
-        "messageText": "={{ $('AI Agent').item.json.output }}",
+        "messageText": "={{ $json.cleanText }}",
         "options_message": {}
       },
       "type": "n8n-nodes-evolution-api-en.evolutionApi",
       "typeVersion": 1,
-      "position": [-2688, 4400],
+      "position": [-2480, 4304],
       "id": "d6612f9d-bc56-4c57-b499-c26d1a7ffa83",
       "name": "Send - AI Message",
       "credentials": {
@@ -181,23 +174,21 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/mark-sent",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "lastAITime", "value": "={{ Date.now() }}" },
-            { "name": "lastResponder", "value": "ai" },
-            { "name": "aiPending", "value": "false" }
+            { "name": "text", "value": "={{ $('Code - Parse Completion').item.json.cleanText }}" }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-2464, 4400],
-      "id": "6462a118-e3ec-4f31-b768-8fbdd5dccddd",
-      "name": "HTTP - Update AI Done"
+      "position": [-2272, 4304],
+      "id": "f9999999-aaaa-4aaa-8aaa-000000000090",
+      "name": "HTTP - Mark Sent"
     },
     {
       "parameters": {
@@ -213,57 +204,31 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-2240, 4400],
+      "position": [-2064, 4304],
       "id": "c7777777-aaaa-4aaa-8aaa-000000000070",
       "name": "HTTP - Clear Buffer"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "lastAITime", "value": "={{ $json.timestamp * 1000 }}" },
-            { "name": "lastResponder", "value": "ai" },
-            { "name": "aiPending", "value": "false" }
-          ]
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            { "id": "cond-qualified", "leftValue": "={{ $('Code - Parse Completion').item.json.qualified }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-3488, 4592],
-      "id": "ea7b486f-187c-4265-b7d7-c08b3e11f78d",
-      "name": "HTTP - Log AI Response"
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-1856, 4304],
+      "id": "a1010101-aaaa-4aaa-8aaa-000000000100",
+      "name": "If - Qualified"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "lastClientTime", "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp * 1000 }}" },
-            { "name": "lastResponder", "value": "client" },
-            { "name": "clientActive", "value": "true" },
-            { "name": "aiPending", "value": "false" }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-3488, 4752],
-      "id": "75f2583e-8d21-43c7-80a9-0de42c742cff",
-      "name": "HTTP - Update Client Takeover"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/workflow/cancel-ai",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/ai-complete",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
@@ -274,9 +239,80 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3264, 4752],
-      "id": "db627340-d995-415e-a363-75a314f94a35",
-      "name": "HTTP - Cancel Pending AI"
+      "position": [-1648, 4208],
+      "id": "a1111111-aaaa-4aaa-8aaa-000000000110",
+      "name": "HTTP - AI Complete (Stop)"
+    },
+    {
+      "parameters": { "amount": 5 },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-3808, 4560],
+      "id": "a1212121-aaaa-4aaa-8aaa-000000000120",
+      "name": "Wait - 5s (Echo Settle)",
+      "webhookId": "wait-5s-settle"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/check-sent",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
+            { "name": "text", "value": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3584, 4560],
+      "id": "a1313131-aaaa-4aaa-8aaa-000000000130",
+      "name": "HTTP - Check Sent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            { "id": "cond-ours", "leftValue": "={{ $json.ours }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-3360, 4560],
+      "id": "a1414141-aaaa-4aaa-8aaa-000000000140",
+      "name": "If - Our Echo?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-3136, 4464],
+      "id": "a1515151-aaaa-4aaa-8aaa-000000000150",
+      "name": "IGNORE - Our Own Echo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/handoff",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3136, 4640],
+      "id": "a1616161-aaaa-4aaa-8aaa-000000000160",
+      "name": "HTTP - Handoff (Disable AI)"
     }
   ],
   "connections": {
@@ -289,32 +325,26 @@
     "If - Message Type": {
       "main": [
         [{ "node": "HTTP - Buffer Append", "type": "main", "index": 0 }],
-        [{ "node": "If - AI or Client", "type": "main", "index": 0 }]
-      ]
-    },
-    "If - AI or Client": {
-      "main": [
-        [{ "node": "HTTP - Log AI Response", "type": "main", "index": 0 }],
-        [{ "node": "HTTP - Update Client Takeover", "type": "main", "index": 0 }]
+        [{ "node": "Wait - 5s (Echo Settle)", "type": "main", "index": 0 }]
       ]
     },
     "HTTP - Buffer Append": {
-      "main": [[{ "node": "Wait - 30s (Batch + Takeover)", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Wait - 15s (Batch + Takeover)", "type": "main", "index": 0 }]]
     },
-    "Wait - 30s (Batch + Takeover)": {
+    "Wait - 15s (Batch + Takeover)": {
       "main": [[{ "node": "HTTP - Get Status (After Wait)", "type": "main", "index": 0 }]]
     },
     "HTTP - Get Status (After Wait)": {
-      "main": [[{ "node": "If - Latest & Client Free", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "If - Latest & AI Enabled", "type": "main", "index": 0 }]]
     },
-    "If - Latest & Client Free": {
+    "If - Latest & AI Enabled": {
       "main": [
         [{ "node": "AI Agent", "type": "main", "index": 0 }],
-        [{ "node": "STOP - Superseded or Client Took Over", "type": "main", "index": 0 }]
+        [{ "node": "STOP - Superseded / Handed Off", "type": "main", "index": 0 }]
       ]
     },
     "AI Agent": {
-      "main": [[{ "node": "Send - AI Message", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Code - Parse Completion", "type": "main", "index": 0 }]]
     },
     "Simple Memory": {
       "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]]
@@ -322,14 +352,35 @@
     "Google Gemini Chat Model": {
       "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
     },
-    "Send - AI Message": {
-      "main": [[{ "node": "HTTP - Update AI Done", "type": "main", "index": 0 }]]
+    "Code - Parse Completion": {
+      "main": [[{ "node": "Send - AI Message", "type": "main", "index": 0 }]]
     },
-    "HTTP - Update AI Done": {
+    "Send - AI Message": {
+      "main": [[{ "node": "HTTP - Mark Sent", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Mark Sent": {
       "main": [[{ "node": "HTTP - Clear Buffer", "type": "main", "index": 0 }]]
     },
-    "HTTP - Update Client Takeover": {
-      "main": [[{ "node": "HTTP - Cancel Pending AI", "type": "main", "index": 0 }]]
+    "HTTP - Clear Buffer": {
+      "main": [[{ "node": "If - Qualified", "type": "main", "index": 0 }]]
+    },
+    "If - Qualified": {
+      "main": [
+        [{ "node": "HTTP - AI Complete (Stop)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Wait - 5s (Echo Settle)": {
+      "main": [[{ "node": "HTTP - Check Sent", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Check Sent": {
+      "main": [[{ "node": "If - Our Echo?", "type": "main", "index": 0 }]]
+    },
+    "If - Our Echo?": {
+      "main": [
+        [{ "node": "IGNORE - Our Own Echo", "type": "main", "index": 0 }],
+        [{ "node": "HTTP - Handoff (Disable AI)", "type": "main", "index": 0 }]
+      ]
     }
   },
   "pinData": {},

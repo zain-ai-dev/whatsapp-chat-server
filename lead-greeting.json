@@ -118,7 +118,7 @@
             },
             {
               "name": "greetingText",
-              "value": "=Hello {{ $('Format Lead').item.json.customer_name }}! Thank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC. We'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for?"
+              "value": "=Hello {{ $('Format Lead').item.json.customer_name }}! 👋 Thank you for your interest in TimeZone Dubai — your destination for luxury and rare timepieces at Gate Avenue, DIFC. We'd love to help you find the perfect watch. Could you tell us a little more about what you're looking for? 🕰️"
             }
           ]
         },
