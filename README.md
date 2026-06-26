@@ -48,27 +48,28 @@ Webhook → Extract → If CUSTOMER?
   ├ no  → If AI or Client
   │        ├ AI     → Log (no forward to customer)
   │        └ CLIENT → Update takeover (clientActive=true) → cancel-ai
-  └ yes → Buffer Append → Get Status → If Client Active?
-            ├ yes → SKIP (human is handling)
-            └ no  → Set aiPending=true → Wait 8s (debounce)
-                    → Get Buffer → If newest msg id == mine?
-                         ├ no  → STOP (a later run handles the full buffer)
-                         └ yes → AI Agent (input = all buffered msgs) → Clear Buffer
-                                 → Wait 30s (client takeover window)
-                                 → Recheck → If aiPending still true?
-                                      ├ yes → Send AI → set aiPending=false
-                                      └ no  → CANCEL (client jumped in)
+  └ yes → Buffer Append (server records lastCustomerMsgId)
+          → Wait 30s (single window: batch + client takeover)
+          → Get Status → If (lastCustomerMsgId == my id) AND (clientActive == false)?
+               ├ yes → AI Agent (input = all buffered msgs) → Send → mark done → Clear Buffer
+               └ no  → STOP (a newer message superseded me, or a human took over)
 ```
 
-- **Batching:** 3 rapid texts each start a run, but only the run whose message is the
-  *newest in the buffer* proceeds; it answers all of them together. The others stop.
+One **single 30s wait** serves as both the batching window and the human-takeover grace
+period. After it, exactly one run passes the gate:
+
+- **Batching / no duplicates:** the gate compares against `lastCustomerMsgId`, a persistent
+  field that is **not** cleared with the buffer — so only the truly-latest message's run
+  proceeds (even after a clear). All earlier runs stop. The winner answers every buffered
+  message together. This removes the earlier cascade where every message generated a reply
+  and all-but-one were cancelled.
 - **No re-greeting:** the agent reads `greetingSent` and is told not to greet again.
 - **Context:** the LangChain `Simple Memory` is keyed by `remoteJid`, so prior turns persist.
-- **Client takeover:** if a human replies from the business phone within ~30s, `aiPending`
-  flips to `false` and the pending AI reply is cancelled instead of sent.
+- **Client takeover:** if a human replies from the business phone during the 30s, the gate's
+  `clientActive == false` check fails and the AI does not send.
 
-> Timing note: total AI latency ≈ 8s debounce + generation + 30s takeover. Lower the
-> two `Wait` nodes if you want faster replies.
+> Timing note: AI latency ≈ 30s + generation. Lower the single `Wait` node for faster
+> replies (shorter human-takeover window) or raise it for a longer takeover window.
 
 ---
 

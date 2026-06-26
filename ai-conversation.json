@@ -9,8 +9,8 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-5152, 2496],
-      "id": "947091b8-6238-47a9-ac04-17826f29f079",
+      "position": [-4544, 4352],
+      "id": "03e8accd-8b60-4e4a-a559-6d14f54634d3",
       "name": "Webhook - Messages",
       "webhookId": "4bef86b0-2efc-4fd4-8ba0-e611b074e301"
     },
@@ -20,8 +20,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-4896, 2496],
-      "id": "0b548023-db5c-44b1-a4f5-7a688c108a8a",
+      "position": [-4288, 4352],
+      "id": "1c1ba432-f6f4-44b9-aa4b-2b97d71ad472",
       "name": "Function - Extract Data"
     },
     {
@@ -37,8 +37,8 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-4656, 2496],
-      "id": "ba788c5a-c985-44d1-ba08-0a370cee0966",
+      "position": [-4048, 4352],
+      "id": "32a8f11a-b53c-4be8-af64-c7701c9c32b4",
       "name": "If - Message Type"
     },
     {
@@ -54,8 +54,8 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-4656, 2848],
-      "id": "438cf29d-a613-4b26-906f-a7ae9071fde7",
+      "position": [-3712, 4592],
+      "id": "8f3b549a-ce58-4763-8fe3-ec7b09f46038",
       "name": "If - AI or Client"
     },
     {
@@ -75,9 +75,18 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-4448, 2496],
+      "position": [-3808, 4352],
       "id": "d2222222-aaaa-4aaa-8aaa-000000000020",
       "name": "HTTP - Buffer Append"
+    },
+    {
+      "parameters": { "amount": 30 },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-3584, 4352],
+      "id": "079a582a-1e7a-4d56-99f7-96aaa2bc1159",
+      "name": "Wait - 30s (Batch + Takeover)",
+      "webhookId": "wait-30s-batch"
     },
     {
       "parameters": {
@@ -86,16 +95,17 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-4240, 2496],
-      "id": "459665f0-f97b-4d4e-a528-cd8fede2223a",
-      "name": "HTTP - Get Chat Status"
+      "position": [-3360, 4352],
+      "id": "6faa2e2a-ad14-4a2f-8299-f153b4e96139",
+      "name": "HTTP - Get Status (After Wait)"
     },
     {
       "parameters": {
         "conditions": {
           "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
           "conditions": [
-            { "id": "condition-client-active", "leftValue": "={{ $json.clientActive }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+            { "id": "cond-latest", "leftValue": "={{ $json.lastCustomerMsgId }}", "rightValue": "={{ $('Webhook - Messages').item.json.body.data.key.id }}", "operator": { "type": "string", "operation": "equals" } },
+            { "id": "cond-not-client", "leftValue": "={{ $json.clientActive }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
           ],
           "combinator": "and"
         },
@@ -103,97 +113,30 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-4032, 2400],
-      "id": "81fcd4e4-a20f-43a3-bb11-d918e5410649",
-      "name": "If - Client Active"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [-3824, 2288],
-      "id": "fa448028-3561-4213-b824-df8ee02e5896",
-      "name": "SKIP - Client Handling Chat"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/update",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "lastCustomerTime", "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp * 1000 }}" },
-            { "name": "lastResponder", "value": "ai" },
-            { "name": "aiPending", "value": "true" },
-            { "name": "clientActive", "value": "false" }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-3824, 2496],
-      "id": "82869d7c-4c66-4c63-a73c-33fad1e6fcb6",
-      "name": "HTTP - Set AI Pending"
-    },
-    {
-      "parameters": { "amount": 8 },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [-3616, 2496],
-      "id": "e3333333-aaaa-4aaa-8aaa-000000000030",
-      "name": "Wait - 8s Debounce",
-      "webhookId": "wait-8s-debounce"
-    },
-    {
-      "parameters": {
-        "url": "=http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/buffer?remoteJid={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-3408, 2496],
-      "id": "f4444444-aaaa-4aaa-8aaa-000000000040",
-      "name": "HTTP - Get Buffer"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
-          "conditions": [
-            { "id": "condition-newest-is-mine", "leftValue": "={{ $json.lastId }}", "rightValue": "={{ $('Webhook - Messages').item.json.body.data.key.id }}", "operator": { "type": "string", "operation": "equals" } }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [-3200, 2496],
+      "position": [-3136, 4352],
       "id": "a5555555-aaaa-4aaa-8aaa-000000000050",
-      "name": "If - Newest Is Mine"
+      "name": "If - Latest & Client Free"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-2992, 2384],
+      "position": [-2912, 4192],
       "id": "b6666666-aaaa-4aaa-8aaa-000000000060",
-      "name": "STOP - Stale Run (Newer Message Arrived)"
+      "name": "STOP - Superseded or Client Took Over"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Customer's message(s) to answer (treat all lines as one turn):\n{{ $('HTTP - Get Buffer').item.json.combinedText }}\n{{ $('HTTP - Get Chat Status').item.json.greetingSent ? '[Internal note: This customer already received our welcome greeting earlier. Do NOT greet again, do NOT say \"Welcome\", and do NOT re-introduce the boutique. Just answer their actual question directly.]' : '' }}",
+        "text": "=Customer's message(s) to answer (treat all lines as one turn):\n{{ $('HTTP - Get Status (After Wait)').item.json.combinedText }}\n{{ $('HTTP - Get Status (After Wait)').item.json.greetingSent ? '[Internal note: This customer already received our welcome greeting earlier. Do NOT greet again, do NOT say \"Welcome\", and do NOT re-introduce the boutique. Just answer their actual question directly.]' : '' }}",
         "options": {
           "systemMessage": "You are the WhatsApp assistant for TimeZone Dubai (The Timezone Watches Ltd), Dubai's leading destination for luxury timepieces, based at Gate Avenue, DIFC. We specialize in exceptional PRE-OWNED and RARE GENUINE watches from the world's most prestigious brands, backed by over a century of Swiss watchmaking craftsmanship and heritage. Our in-store collection includes Rolex, Patek Philippe, Audemars Piguet, Richard Mille, Cartier, Bvlgari, A. Lange & Söhne, and Arnold & Son. We also offer sourcing services for exclusive brands including Audemars Piguet, Hublot, Patek Philippe, Richard Mille, Jaeger-LeCoultre, Panerai, Breguet, Breitling, Franck Muller, and IWC, among others. Every watch is 100% authentic, inspected multi-point by our in-house experts — we never sell replicas or first-copies. Our four core values are Service, Knowledge, Independence, and Trust.\n\nGreet every customer warmly and naturally, and find out what they are looking for. Never mention Facebook, ads, leads, or how they reached us — just have a friendly, general conversation. Your goals, in order: (1) understand which watch / brand / style they want and whether they are a serious buyer, (2) build interest using your brand knowledge, (3) route them appropriately.\n\nHow to route (decide based on the customer's message):\n- If they want to see, try on, buy, or browse a watch, or are clearly a serious buyer → invite them to VISIT OUR SHOWROOM for a private viewing by appointment, and ALWAYS include the showroom address together with the Google Maps link below.\n- If they want pricing, a trade-in/sell valuation, negotiation, a specific model/availability check, or ask anything you cannot answer from the info above → tell them our team will assist them, and connect them (a specialist will take over the chat).\n- If it is a simple general question you can answer from the info above → answer it briefly, then point them to a showroom visit or our team.\n\nWhat you know (use when relevant):\n- Condition: mint and near-mint; any minor wear is documented with photos.\n- Warranty: most watches carry the remainder of the manufacturer warranty; otherwise our own 12-month mechanical warranty.\n- Trade-in: yes, competitive valuations — our team can give a preliminary valuation.\n- Boxes & papers: we prioritize full sets; details are confirmed per watch.\n- Services: buy, sell, and trade pre-owned luxury watches, plus professional evaluation, customization, and watchmaking/servicing.\n- We serve clients across the UAE: Dubai, Abu Dhabi, Sharjah, Ajman, Ras al-Khaimah, Fujairah, Umm al Quwain, and Palm Jumeirah.\n- Showroom: North Zone, Gate Avenue, Unit GA-00-NZ-G0-RT-49, Level GF, DIFC, Dubai, UAE. Google Maps: https://maps.app.goo.gl/yYsfxWDLoRYSx1XP7 . Hours: Mon–Sat 10:00–22:00, Sun 12:00–20:00. Contact: +971 58 905 1405, info@timezonedubai.com.\n- Website: https://timezonedubai.com — share only when the customer actually needs it (e.g. to browse the collection), never by default.\n\nRules:\n- NEVER quote, estimate, or discuss prices. If asked about price, let them know our team shares details during a private viewing or call, and offer a showroom visit.\n- NEVER confirm orders or take payment.\n- NEVER guess or improvise. If you do not know something (a specific model, availability, a detail, or anything outside the info above), do not make it up — reply with a short, helpful line such as: \"Let me have our team get in touch with you on this.\" and offer a showroom visit or specialist call.\n- Sound like a real person from the boutique texting on WhatsApp — natural and warm. NEVER reveal or imply you are an AI, bot, or assistant.\n- Use appreciation or filler words (\"Great\", \"Perfect\", \"Thank you\", etc.) only when the moment genuinely calls for it — not at the start of every message.\n- When you mention or invite them to the showroom, you MUST include the location (address + Google Maps link). Never mention the showroom without the location.\n- Never use internal terms like \"Client Advisor\" or \"specialist\" to the customer — just say \"our team\". Do NOT repeat \"our team\" in every message; only mention a handoff when genuinely needed, and vary your wording.\n- English only. CRITICAL: keep EVERY reply to 1–2 short lines maximum (one or two short sentences) — like a quick WhatsApp text, never a paragraph. Ask only one question at a time.\n- When the customer is ready, let them know our team will follow up and/or invite them to book a showroom visit — in one short line.\n\nCONVERSATION CONTINUITY: If the user message contains an internal note saying the customer was already greeted, do NOT greet again, do NOT say \"Welcome\", and do NOT re-introduce the boutique — simply continue and answer what they asked. The customer may send several messages at once; treat them as a single turn and answer them together in one short reply. Use the conversation memory so you never repeat yourself or lose context."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [-2992, 2560],
-      "id": "5be2a5e1-0289-4bdf-907c-a6c8dca0b6f4",
+      "position": [-2912, 4400],
+      "id": "68100454-bc41-4a7e-8fff-850168f427da",
       "name": "AI Agent"
     },
     {
@@ -203,83 +146,20 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
-      "position": [-2912, 2784],
-      "id": "f4a84acd-344c-4826-a27d-a7e2e2db4194",
+      "position": [-2832, 4624],
+      "id": "84d059d7-e4d8-48ad-9431-836f84e77f40",
       "name": "Simple Memory"
     },
     {
       "parameters": { "options": {} },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
-      "position": [-3056, 2784],
-      "id": "7080414e-16ce-466b-b720-5d6947d1b9a9",
+      "position": [-2976, 4608],
+      "id": "745b4a94-d39d-4590-a3ef-7d196b0de01f",
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": { "id": "rv8Gx2C0yKGwzKZT", "name": "Gemini API Key" }
       }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/buffer/clear",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-2736, 2560],
-      "id": "c7777777-aaaa-4aaa-8aaa-000000000070",
-      "name": "HTTP - Clear Buffer"
-    },
-    {
-      "parameters": { "amount": 30 },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [-2528, 2560],
-      "id": "af3765aa-1cbf-4fa3-874a-df625cd24c38",
-      "name": "Wait - 30s Takeover",
-      "webhookId": "wait-30s-takeover"
-    },
-    {
-      "parameters": {
-        "url": "=http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/status?remoteJid={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-2320, 2560],
-      "id": "97cd2aca-e73d-47fc-b216-a533b478570d",
-      "name": "HTTP - Recheck Client Status"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
-          "conditions": [
-            { "id": "condition-ai-still-pending", "leftValue": "={{ $json.aiPending }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [-2112, 2560],
-      "id": "9bb13274-2767-41e4-8001-d2ebebcb4c4f",
-      "name": "If - AI Still Pending"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [-1904, 2448],
-      "id": "035fe043-81e4-46a4-8d50-aa13559559d4",
-      "name": "CANCEL - AI Response (Client Took Over)"
     },
     {
       "parameters": {
@@ -291,8 +171,8 @@
       },
       "type": "n8n-nodes-evolution-api-en.evolutionApi",
       "typeVersion": 1,
-      "position": [-1904, 2640],
-      "id": "d7e042d6-e0bf-4bad-a2bc-afc41f7ed51b",
+      "position": [-2688, 4400],
+      "id": "d6612f9d-bc56-4c57-b499-c26d1a7ffa83",
       "name": "Send - AI Message",
       "credentials": {
         "evolutionApi": { "id": "nUouiKyAGid2oMmY", "name": "Evolution account" }
@@ -315,9 +195,27 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-1696, 2640],
-      "id": "2ac23c64-c131-460f-9dcc-d74ac65e46ee",
-      "name": "HTTP - Update AI Response Time"
+      "position": [-2464, 4400],
+      "id": "6462a118-e3ec-4f31-b768-8fbdd5dccddd",
+      "name": "HTTP - Update AI Done"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://b8k404kgks8k4kowss4k0804.31.97.78.118.sslip.io/api/chat/buffer/clear",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-2240, 4400],
+      "id": "c7777777-aaaa-4aaa-8aaa-000000000070",
+      "name": "HTTP - Clear Buffer"
     },
     {
       "parameters": {
@@ -336,8 +234,8 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-4448, 2848],
-      "id": "bf67536b-f7fe-4396-95d4-a0e28b7e6056",
+      "position": [-3488, 4592],
+      "id": "ea7b486f-187c-4265-b7d7-c08b3e11f78d",
       "name": "HTTP - Log AI Response"
     },
     {
@@ -358,8 +256,8 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-4448, 3008],
-      "id": "35f06763-f438-4abb-808d-7b1832d3ce2e",
+      "position": [-3488, 4752],
+      "id": "75f2583e-8d21-43c7-80a9-0de42c742cff",
       "name": "HTTP - Update Client Takeover"
     },
     {
@@ -376,8 +274,8 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-4240, 3040],
-      "id": "04728824-91b5-487f-844a-859e575e3674",
+      "position": [-3264, 4752],
+      "id": "db627340-d995-415e-a363-75a314f94a35",
       "name": "HTTP - Cancel Pending AI"
     }
   ],
@@ -401,34 +299,22 @@
       ]
     },
     "HTTP - Buffer Append": {
-      "main": [[{ "node": "HTTP - Get Chat Status", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Wait - 30s (Batch + Takeover)", "type": "main", "index": 0 }]]
     },
-    "HTTP - Get Chat Status": {
-      "main": [[{ "node": "If - Client Active", "type": "main", "index": 0 }]]
+    "Wait - 30s (Batch + Takeover)": {
+      "main": [[{ "node": "HTTP - Get Status (After Wait)", "type": "main", "index": 0 }]]
     },
-    "If - Client Active": {
-      "main": [
-        [{ "node": "SKIP - Client Handling Chat", "type": "main", "index": 0 }],
-        [{ "node": "HTTP - Set AI Pending", "type": "main", "index": 0 }]
-      ]
+    "HTTP - Get Status (After Wait)": {
+      "main": [[{ "node": "If - Latest & Client Free", "type": "main", "index": 0 }]]
     },
-    "HTTP - Set AI Pending": {
-      "main": [[{ "node": "Wait - 8s Debounce", "type": "main", "index": 0 }]]
-    },
-    "Wait - 8s Debounce": {
-      "main": [[{ "node": "HTTP - Get Buffer", "type": "main", "index": 0 }]]
-    },
-    "HTTP - Get Buffer": {
-      "main": [[{ "node": "If - Newest Is Mine", "type": "main", "index": 0 }]]
-    },
-    "If - Newest Is Mine": {
+    "If - Latest & Client Free": {
       "main": [
         [{ "node": "AI Agent", "type": "main", "index": 0 }],
-        [{ "node": "STOP - Stale Run (Newer Message Arrived)", "type": "main", "index": 0 }]
+        [{ "node": "STOP - Superseded or Client Took Over", "type": "main", "index": 0 }]
       ]
     },
     "AI Agent": {
-      "main": [[{ "node": "HTTP - Clear Buffer", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Send - AI Message", "type": "main", "index": 0 }]]
     },
     "Simple Memory": {
       "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]]
@@ -436,23 +322,11 @@
     "Google Gemini Chat Model": {
       "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
     },
-    "HTTP - Clear Buffer": {
-      "main": [[{ "node": "Wait - 30s Takeover", "type": "main", "index": 0 }]]
-    },
-    "Wait - 30s Takeover": {
-      "main": [[{ "node": "HTTP - Recheck Client Status", "type": "main", "index": 0 }]]
-    },
-    "HTTP - Recheck Client Status": {
-      "main": [[{ "node": "If - AI Still Pending", "type": "main", "index": 0 }]]
-    },
-    "If - AI Still Pending": {
-      "main": [
-        [{ "node": "Send - AI Message", "type": "main", "index": 0 }],
-        [{ "node": "CANCEL - AI Response (Client Took Over)", "type": "main", "index": 0 }]
-      ]
-    },
     "Send - AI Message": {
-      "main": [[{ "node": "HTTP - Update AI Response Time", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "HTTP - Update AI Done", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Update AI Done": {
+      "main": [[{ "node": "HTTP - Clear Buffer", "type": "main", "index": 0 }]]
     },
     "HTTP - Update Client Takeover": {
       "main": [[{ "node": "HTTP - Cancel Pending AI", "type": "main", "index": 0 }]]
