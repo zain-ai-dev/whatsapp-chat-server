@@ -9,27 +9,46 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-4544, 4352],
+      "position": [
+        -4544,
+        4352
+      ],
       "id": "03e8accd-8b60-4e4a-a559-6d14f54634d3",
       "name": "Webhook - Messages",
       "webhookId": "4bef86b0-2efc-4fd4-8ba0-e611b074e301"
     },
     {
       "parameters": {
-        "jsCode": "// Extract message data\nconst body = $json.body;\nconst data = body.data;\nconst key = data.key;\n\nconst remoteJid = key.remoteJid;\nconst messageId = key.id;\nconst fromMe = key.fromMe;\nconst source = data.source;\nconst timestamp = data.messageTimestamp;\nconst messageText = data.message.conversation || '';\nconst pushName = data.pushName || 'Unknown';\n\n// CUSTOMER = inbound (fromMe false). Everything we/the human send is fromMe true\n// and goes to the OUTBOUND path, where the server tells us (by matching the\n// text we sent) whether it is our own echo or a real human message.\nlet messageType = 'OUTBOUND';\nif (fromMe === false) {\n  messageType = 'CUSTOMER';\n}\n\nreturn {\n  remoteJid: remoteJid,\n  messageId: messageId,\n  fromMe: fromMe,\n  source: source,\n  timestamp: timestamp,\n  messageText: messageText,\n  pushName: pushName,\n  messageType: messageType,\n  isCustomer: messageType === 'CUSTOMER'\n};"
+        "jsCode": "// Extract message data\nconst body = $json.body;\nconst data = body.data;\nconst key = data.key;\n\nconst remoteJid = key.remoteJid;\nconst messageId = key.id;\nconst fromMe = key.fromMe;\nconst source = data.source;\nconst timestamp = data.messageTimestamp;\nconst messageText = data.message.conversation || '';\nconst pushName = data.pushName || 'Unknown';\n\n// CUSTOMER = inbound (fromMe false). Everything we/the human send is fromMe true\n// and goes to the OUTBOUND path, where the server tells us (by matching the\n// text we sent) whether it is our own echo or a real human message.\nlet messageType = 'OUTBOUND';\nif (fromMe === false) {\n  const msgType = data.messageType || '';\n  const isMedia = msgType.includes('image') || msgType.includes('video') || msgType.includes('audio') || msgType.includes('document') || msgType.includes('sticker');\n  \n  if (remoteJid.includes('@g.us') || remoteJid.includes('@broadcast') || remoteJid.includes('-')) {\n    messageType = 'GROUP';\n  } else if (isMedia) {\n    messageType = 'MEDIA_IGNORE';\n  } else {\n    messageType = 'CUSTOMER';\n  }\n}\n\nreturn {\n  remoteJid: remoteJid,\n  messageId: messageId,\n  fromMe: fromMe,\n  source: source,\n  timestamp: timestamp,\n  messageText: messageText,\n  pushName: pushName,\n  messageType: messageType,\n  isCustomer: messageType === 'CUSTOMER'\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-4288, 4352],
+      "position": [
+        -4288,
+        4352
+      ],
       "id": "1c1ba432-f6f4-44b9-aa4b-2b97d71ad472",
       "name": "Function - Extract Data"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
-            { "id": "condition-message-type", "leftValue": "={{ $json.messageType }}", "rightValue": "CUSTOMER", "operator": { "type": "string", "operation": "equals" } }
+            {
+              "id": "condition-message-type",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "CUSTOMER",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
           ],
           "combinator": "and"
         },
@@ -37,7 +56,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-4048, 4352],
+      "position": [
+        -4048,
+        4352
+      ],
       "id": "32a8f11a-b53c-4be8-af64-c7701c9c32b4",
       "name": "If - Message Type"
     },
@@ -48,25 +70,45 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "messageText", "value": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}" },
-            { "name": "timestamp", "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp }}" },
-            { "name": "id", "value": "={{ $('Webhook - Messages').item.json.body.data.key.id }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "messageText",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.messageTimestamp }}"
+            },
+            {
+              "name": "id",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.id }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3808, 4256],
+      "position": [
+        -3808,
+        4256
+      ],
       "id": "d2222222-aaaa-4aaa-8aaa-000000000020",
       "name": "HTTP - Buffer Append"
     },
     {
-      "parameters": { "amount": 15 },
+      "parameters": {
+        "amount": 15
+      },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-3584, 4256],
+      "position": [
+        -3584,
+        4256
+      ],
       "id": "079a582a-1e7a-4d56-99f7-96aaa2bc1159",
       "name": "Wait - 15s (Batch + Takeover)",
       "webhookId": "wait-15s-batch"
@@ -78,17 +120,50 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3360, 4256],
+      "position": [
+        -3360,
+        4256
+      ],
       "id": "6faa2e2a-ad14-4a2f-8299-f153b4e96139",
       "name": "HTTP - Get Status (After Wait)"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
-            { "id": "cond-latest", "leftValue": "={{ $json.lastCustomerMsgId }}", "rightValue": "={{ $('Webhook - Messages').item.json.body.data.key.id }}", "operator": { "type": "string", "operation": "equals" } },
-            { "id": "cond-ai-enabled", "leftValue": "={{ $json.aiDisabled }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
+            {
+              "id": "cond-latest",
+              "leftValue": "={{ $json.lastCustomerMsgId }}",
+              "rightValue": "={{ $('Webhook - Messages').item.json.body.data.key.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-ai-enabled",
+              "leftValue": "={{ $json.aiDisabled }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-greeting-sent",
+              "leftValue": "={{ $json.greetingSent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
           ],
           "combinator": "and"
         },
@@ -96,7 +171,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-3136, 4256],
+      "position": [
+        -3136,
+        4256
+      ],
       "id": "a5555555-aaaa-4aaa-8aaa-000000000050",
       "name": "If - Latest & AI Enabled"
     },
@@ -104,7 +182,10 @@
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-2912, 4112],
+      "position": [
+        -2912,
+        4112
+      ],
       "id": "b6666666-aaaa-4aaa-8aaa-000000000060",
       "name": "STOP - Superseded / Handed Off"
     },
@@ -118,7 +199,10 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [-2912, 4304],
+      "position": [
+        -2912,
+        4304
+      ],
       "id": "68100454-bc41-4a7e-8fff-850168f427da",
       "name": "AI Agent"
     },
@@ -129,19 +213,30 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
-      "position": [-2832, 4528],
+      "position": [
+        -2832,
+        4528
+      ],
       "id": "84d059d7-e4d8-48ad-9431-836f84e77f40",
       "name": "Simple Memory"
     },
     {
-      "parameters": { "options": {} },
+      "parameters": {
+        "options": {}
+      },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
-      "position": [-2976, 4512],
+      "position": [
+        -2976,
+        4512
+      ],
       "id": "745b4a94-d39d-4590-a3ef-7d196b0de01f",
       "name": "Google Gemini Chat Model",
       "credentials": {
-        "googlePalmApi": { "id": "rv8Gx2C0yKGwzKZT", "name": "Gemini API Key" }
+        "googlePalmApi": {
+          "id": "rv8Gx2C0yKGwzKZT",
+          "name": "Gemini API Key"
+        }
       }
     },
     {
@@ -150,7 +245,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-2688, 4304],
+      "position": [
+        -2688,
+        4304
+      ],
       "id": "e8888888-aaaa-4aaa-8aaa-000000000080",
       "name": "Code - Parse Completion"
     },
@@ -164,11 +262,17 @@
       },
       "type": "n8n-nodes-evolution-api-en.evolutionApi",
       "typeVersion": 1,
-      "position": [-2480, 4304],
+      "position": [
+        -2480,
+        4304
+      ],
       "id": "d6612f9d-bc56-4c57-b499-c26d1a7ffa83",
       "name": "Send - AI Message",
       "credentials": {
-        "evolutionApi": { "id": "nUouiKyAGid2oMmY", "name": "Evolution account" }
+        "evolutionApi": {
+          "id": "nUouiKyAGid2oMmY",
+          "name": "Evolution account"
+        }
       }
     },
     {
@@ -178,15 +282,24 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "text", "value": "={{ $('Code - Parse Completion').item.json.cleanText }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Code - Parse Completion').item.json.cleanText }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-2272, 4304],
+      "position": [
+        -2272,
+        4304
+      ],
       "id": "f9999999-aaaa-4aaa-8aaa-000000000090",
       "name": "HTTP - Mark Sent"
     },
@@ -197,23 +310,42 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-2064, 4304],
+      "position": [
+        -2064,
+        4304
+      ],
       "id": "c7777777-aaaa-4aaa-8aaa-000000000070",
       "name": "HTTP - Clear Buffer"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
-            { "id": "cond-qualified", "leftValue": "={{ $('Code - Parse Completion').item.json.qualified }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+            {
+              "id": "cond-qualified",
+              "leftValue": "={{ $('Code - Parse Completion').item.json.qualified }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
           ],
           "combinator": "and"
         },
@@ -221,7 +353,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-1856, 4304],
+      "position": [
+        -1856,
+        4304
+      ],
       "id": "a1010101-aaaa-4aaa-8aaa-000000000100",
       "name": "If - Qualified"
     },
@@ -232,22 +367,33 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-1648, 4208],
+      "position": [
+        -1648,
+        4208
+      ],
       "id": "a1111111-aaaa-4aaa-8aaa-000000000110",
       "name": "HTTP - AI Complete (Stop)"
     },
     {
-      "parameters": { "amount": 5 },
+      "parameters": {
+        "amount": 5
+      },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-3808, 4560],
+      "position": [
+        -3808,
+        4560
+      ],
       "id": "a1212121-aaaa-4aaa-8aaa-000000000120",
       "name": "Wait - 5s (Echo Settle)",
       "webhookId": "wait-5s-settle"
@@ -259,24 +405,46 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" },
-            { "name": "text", "value": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.message.conversation }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3584, 4560],
+      "position": [
+        -3584,
+        4560
+      ],
       "id": "a1313131-aaaa-4aaa-8aaa-000000000130",
       "name": "HTTP - Check Sent"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
-            { "id": "cond-ours", "leftValue": "={{ $json.ours }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+            {
+              "id": "cond-ours",
+              "leftValue": "={{ $json.ours }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
           ],
           "combinator": "and"
         },
@@ -284,7 +452,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [-3360, 4560],
+      "position": [
+        -3360,
+        4560
+      ],
       "id": "a1414141-aaaa-4aaa-8aaa-000000000140",
       "name": "If - Our Echo?"
     },
@@ -292,7 +463,10 @@
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-3136, 4464],
+      "position": [
+        -3136,
+        4464
+      ],
       "id": "a1515151-aaaa-4aaa-8aaa-000000000150",
       "name": "IGNORE - Our Own Echo"
     },
@@ -303,83 +477,243 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "remoteJid", "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}" }
+            {
+              "name": "remoteJid",
+              "value": "={{ $('Webhook - Messages').item.json.body.data.key.remoteJid }}"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3136, 4640],
+      "position": [
+        -3136,
+        4640
+      ],
       "id": "a1616161-aaaa-4aaa-8aaa-000000000160",
       "name": "HTTP - Handoff (Disable AI)"
     }
   ],
   "connections": {
     "Webhook - Messages": {
-      "main": [[{ "node": "Function - Extract Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Function - Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Function - Extract Data": {
-      "main": [[{ "node": "If - Message Type", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If - Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If - Message Type": {
       "main": [
-        [{ "node": "HTTP - Buffer Append", "type": "main", "index": 0 }],
-        [{ "node": "Wait - 5s (Echo Settle)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "HTTP - Buffer Append",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait - 5s (Echo Settle)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "HTTP - Buffer Append": {
-      "main": [[{ "node": "Wait - 15s (Batch + Takeover)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Wait - 15s (Batch + Takeover)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait - 15s (Batch + Takeover)": {
-      "main": [[{ "node": "HTTP - Get Status (After Wait)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP - Get Status (After Wait)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP - Get Status (After Wait)": {
-      "main": [[{ "node": "If - Latest & AI Enabled", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If - Latest & AI Enabled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If - Latest & AI Enabled": {
       "main": [
-        [{ "node": "AI Agent", "type": "main", "index": 0 }],
-        [{ "node": "STOP - Superseded / Handed Off", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "STOP - Superseded / Handed Off",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "AI Agent": {
-      "main": [[{ "node": "Code - Parse Completion", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code - Parse Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Simple Memory": {
-      "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]]
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Google Gemini Chat Model": {
-      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code - Parse Completion": {
-      "main": [[{ "node": "Send - AI Message", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Send - AI Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send - AI Message": {
-      "main": [[{ "node": "HTTP - Mark Sent", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP - Mark Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP - Mark Sent": {
-      "main": [[{ "node": "HTTP - Clear Buffer", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP - Clear Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP - Clear Buffer": {
-      "main": [[{ "node": "If - Qualified", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If - Qualified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If - Qualified": {
       "main": [
-        [{ "node": "HTTP - AI Complete (Stop)", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "HTTP - AI Complete (Stop)",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
     "Wait - 5s (Echo Settle)": {
-      "main": [[{ "node": "HTTP - Check Sent", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP - Check Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP - Check Sent": {
-      "main": [[{ "node": "If - Our Echo?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "If - Our Echo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "If - Our Echo?": {
       "main": [
-        [{ "node": "IGNORE - Our Own Echo", "type": "main", "index": 0 }],
-        [{ "node": "HTTP - Handoff (Disable AI)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "IGNORE - Our Own Echo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP - Handoff (Disable AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
